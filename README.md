@@ -1,8 +1,12 @@
 # Maki Libertinus Mono
 
-My modification of https://github.com/alerque/libertinus
+Modification of https://github.com/alerque/libertinus
 
-Don't expect much. Use `build.sh` and `install.sh`
+Font used at https://maki.cafe
+
+Use `build.sh` and `install.sh`
+
+Don't expect much. Changes are:
 
 -   All glyphs now **82.5% width**
 -   Regular is thicker by **20 units**
