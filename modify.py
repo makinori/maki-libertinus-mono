@@ -20,6 +20,8 @@ OS2_WIDTH = 3
 
 weights = [
     [20, 400, "Regular"],
+    [33.333, 500, "Medium"],
+    [46.666, 600, "Semi-Bold"],
     [60, 700, "Bold"],
 ]
 
@@ -57,7 +59,9 @@ for weight in weights:
         if stroke_width > 0 and can_change_weight:
             glyph.changeWeight(stroke_width, "CJK")
 
-    font.save("fonts/" + font.fontname + ".sfd")
+    filename = "MakiLibertinusMono-" + weight_name.replace("-", "")
 
-    font.generate("fonts/" + font.fontname + ".otf")
-    font.generate("fonts/" + font.fontname + ".woff2")
+    font.save("fonts/" + filename + ".sfd")
+
+    font.generate("fonts/" + filename + ".otf")
+    font.generate("fonts/" + filename + ".woff2")
