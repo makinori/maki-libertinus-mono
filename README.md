@@ -8,7 +8,7 @@ Use `build.sh` and `install.sh`
 
 Don't expect much. Changes are:
 
--   All glyphs now **82.5% width** of original
+-   All glyphs now **75% width** of original
 -   All weights are generated from original
 -   Regular is thicker by **20 units**
 -   Medium is thicker by **33.333 units**

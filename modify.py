@@ -15,7 +15,8 @@ import psMat
 # 4: 87.5% Semi-Condensed
 # 5: 100% Medium
 
-SCALE_X = 0.825
+# SCALE_X = 0.825
+SCALE_X = 0.75
 OS2_WIDTH = 3
 
 weights = [
@@ -52,6 +53,8 @@ for weight in weights:
     SCALE_MATRIX = psMat.scale(SCALE_X, 1)
 
     for glyph in font.glyphs():
+        # scale before applying weight
+
         glyph.transform(SCALE_MATRIX, ("partialRefs"))
 
         can_change_weight = glyph.glyphname not in glyphs_ignore_weight
