@@ -7,4 +7,6 @@ if [ ! -f $sfd_file ]; then
 	https://github.com/alerque/libertinus/raw/refs/heads/master/sources/LibertinusMono-Regular.sfd
 fi
 
+rm -rf fonts/*
+
 fontforge -script modify.py
