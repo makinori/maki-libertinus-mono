@@ -7,7 +7,16 @@ class FontGenInput:
     stroke_width: float
     weight_value: float
     weight_name: str
+    regular_glyph_widths: dict[str, int]
     italic: bool = False
+
+    def __init__(
+        self, stroke_width: float, weight_value: float, weight_name: str
+    ):
+        self.stroke_width = stroke_width
+        self.weight_value = weight_value
+        self.weight_name = weight_name
+        self.regular_glyph_widths = dict()
 
 # 100 Thin
 # 200 Extra-Light
@@ -26,6 +35,9 @@ class FontGenInput:
 # SCALE_X = 0.825
 SCALE_X = 0.75
 OS2_WIDTH = 3
+
+# otherwise looks too thin
+SCALE_X_ITALIC = 0.85
 
 weights = [
     FontGenInput(20, 400, "Regular"),
@@ -61,17 +73,26 @@ def generateFont(i: FontGenInput):
 
     font.copyright = "Edited by https://maki.cafe"
 
-    SCALE_MATRIX = psMat.scale(SCALE_X, 1)
+    if (i.italic):
+        SCALE_MATRIX = psMat.scale(SCALE_X_ITALIC, 1)
+    else:
+        SCALE_MATRIX = psMat.scale(SCALE_X, 1)
 
     # scale first
     for glyph in font.glyphs():
         glyph.transform(SCALE_MATRIX, ("partialRefs"))
 
+        if (not i.italic):
+            i.regular_glyph_widths[glyph.glyphname] = glyph.width
+
     # italicize
     if (i.italic):
-        font.selection.all()
-        font.italicize(-15)
         font.selection.none()
+        for glyph in font.glyphs():
+            font.selection.select(glyph)
+            font.italicize(-15)
+            font.selection.none()
+            glyph.width = i.regular_glyph_widths[glyph.glyphname]
 
     # apply weight
     for glyph in font.glyphs():
