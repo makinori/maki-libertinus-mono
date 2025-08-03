@@ -49,7 +49,7 @@ weights = [
 glyphs_ignore_weight = ["asterisk"]
 
 def generateFont(i: FontGenInput):
-    font = fontforge.open("LibertinusMono-Regular.sfd")
+    font = fontforge.open("libertinus/sources/LibertinusMono-Regular.sfd")
 
     font.weight = i.weight_name
     font.os2_weight = i.weight_value
