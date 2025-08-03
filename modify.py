@@ -74,14 +74,15 @@ def generateFont(i: FontGenInput):
 
     font.copyright = "Edited by https://maki.cafe"
 
+    # scaleMatrix
     if (i.italic):
-        SCALE_MATRIX = psMat.scale(SCALE_X_ITALIC, 1)
+        scaleMatrix = psMat.scale(SCALE_X_ITALIC, 1)
     else:
-        SCALE_MATRIX = psMat.scale(SCALE_X, 1)
+        scaleMatrix = psMat.scale(SCALE_X, 1)
 
     # scale first
     for glyph in font.glyphs():
-        glyph.transform(SCALE_MATRIX, ("partialRefs"))
+        glyph.transform(scaleMatrix, ("partialRefs"))
 
         if (not i.italic):
             i.regular_glyph_widths[glyph.glyphname] = glyph.width
@@ -107,7 +108,7 @@ def generateFont(i: FontGenInput):
     font.generate("fonts/" + filename + ".ttf")
     font.generate("fonts/" + filename + ".woff2")
 
-def processWeight(weight):
+def processWeight(weight: FontGenInput):
     generateFont(weight)
     weight.italic = True
     generateFont(weight)
