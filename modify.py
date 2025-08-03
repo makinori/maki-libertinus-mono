@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from multiprocessing import Process
 import fontforge
 import psMat
 
@@ -106,7 +107,17 @@ def generateFont(i: FontGenInput):
     font.generate("fonts/" + filename + ".ttf")
     font.generate("fonts/" + filename + ".woff2")
 
-for weight in weights:
+def processWeight(weight):
     generateFont(weight)
     weight.italic = True
     generateFont(weight)
+
+procs: list[Process] = []
+
+for weight in weights:
+    p = Process(target=processWeight, args=[weight])
+    p.start()
+    procs.append(p)
+
+for p in procs:
+    p.join()
