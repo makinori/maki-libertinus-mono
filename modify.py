@@ -47,12 +47,15 @@ weights = [
     FontGenInput(60, 700, "Bold"),
 ]
 
+ALT_FONT_STROKE_WIDTH_ADDITION = -15
+
 # below are in ranges (both ends inclusive)
 
 glyphs_from_alt_font = [
     (0x2713, 0x2717),  # check marks and crosses
     (0x2500, 0x25ff),  # box drawing, blocks and others
     (0x2800, 0x28ff),  # braille 
+    0x20ac  # euro symbol
 ]
 
 glyphs_ignore_weight = [
@@ -75,19 +78,31 @@ def for_each_glyph_range_array(
                 if not glyph_func(unicode):
                     return
 
-def should_ignore_weight(glyph) -> bool:
+def should_ignore_weight(needle_unicode: int) -> bool:
     should_ignore = False
 
     def check_glyph(unicode: int) -> bool:
-        if glyph.unicode == unicode:
+        if needle_unicode == unicode:
             nonlocal should_ignore
             should_ignore = True
             return False
         return True
 
     for_each_glyph_range_array(glyphs_ignore_weight, check_glyph)
-
     return should_ignore
+
+def should_copy_from_alt_font(needle_unicode: int) -> bool:
+    should_copy = False
+
+    def check_glyph(unicode: int) -> bool:
+        if needle_unicode == unicode:
+            nonlocal should_copy
+            should_copy = True
+            return False
+        return True
+
+    for_each_glyph_range_array(glyphs_from_alt_font, check_glyph)
+    return should_copy
 
 # https://fontforge.org/docs/scripting/python/fontforge.html
 
@@ -180,8 +195,15 @@ def generateFont(i: FontGenInput):
 
     # apply weight
     for glyph in font.glyphs():
-        if i.stroke_width > 0 and not should_ignore_weight(glyph):
-            glyph.changeWeight(i.stroke_width, "CJK")
+        if should_ignore_weight(glyph.unicode):
+            continue
+
+        stroke_width = i.stroke_width
+        if should_copy_from_alt_font(glyph.unicode):
+            stroke_width += ALT_FONT_STROKE_WIDTH_ADDITION
+
+        if stroke_width > 0:
+            glyph.changeWeight(stroke_width, "CJK")
 
     font.save("fonts/" + filename + ".sfd")
 
