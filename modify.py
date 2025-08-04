@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from multiprocessing import Process
-import fontforge
 import psMat
 
 @dataclass
@@ -47,9 +47,55 @@ weights = [
     FontGenInput(60, 700, "Bold"),
 ]
 
-glyphs_ignore_weight = ["asterisk"]
+# below are in ranges (both ends inclusive)
+
+glyphs_from_alt_font = [
+    (0x2713, 0x2717),  # check marks and crosses
+    (0x2500, 0x25ff),  # box drawing, blocks and others
+    (0x2800, 0x28ff),  # braille 
+]
+
+glyphs_ignore_weight = [
+    0x2a,  # asterisk
+    # from alt font
+    (0x2500, 0x25ff),  # box drawing, blocks and others
+    # kek bold braille characters
+]
+
+def for_each_glyph_range_array(
+    glyph_range_array: list[int | tuple[int, int]] | list[tuple[int, int]],
+    glyph_func: Callable[[int], bool],
+):
+    for glyph_range in glyph_range_array:
+        if isinstance(glyph_range, int):
+            if not glyph_func(glyph_range):
+                return
+        else:
+            for unicode in range(glyph_range[0], glyph_range[1] + 1):
+                if not glyph_func(unicode):
+                    return
+
+def should_ignore_weight(glyph) -> bool:
+    should_ignore = False
+
+    def check_glyph(unicode: int) -> bool:
+        if glyph.unicode == unicode:
+            nonlocal should_ignore
+            should_ignore = True
+            return False
+        return True
+
+    for_each_glyph_range_array(glyphs_ignore_weight, check_glyph)
+
+    return should_ignore
+
+# https://fontforge.org/docs/scripting/python/fontforge.html
 
 def generateFont(i: FontGenInput):
+    import fontforge  # cause we're doing copy and paste in parallel
+
+    alt_font = fontforge.open("alt/IosevkaSlab-Regular.ttc")
+
     font = fontforge.open("libertinus/sources/LibertinusMono-Regular.sfd")
 
     font.weight = i.weight_name
@@ -63,32 +109,68 @@ def generateFont(i: FontGenInput):
     font.fullname = "Maki Libertinus Mono " + i.weight_name
     filename = "MakiLibertinusMono-" + i.weight_name.replace("-", "")
 
-    if (i.italic):
+    if i.italic:
         font.fontname += " Italic"
         font.fullname += " Italic"
         filename += "Italic"
 
-    if (font.copyright != None):
+    if font.copyright != None:
         print("Copyright not empty: " + font.copyright)
         exit(1)
 
     font.copyright = "Edited by https://maki.cafe"
 
-    # scaleMatrix
-    if (i.italic):
-        scaleMatrix = psMat.scale(SCALE_X_ITALIC, 1)
-    else:
-        scaleMatrix = psMat.scale(SCALE_X, 1)
+    # copy from other font
+
+    font_glyph_width = font["a"].width
+    alt_font_glyph_width = alt_font["a"].width
+
+    def copy_glyph_from_alt_font(unicode: int) -> bool:
+        alt_font.selection.select(unicode)
+        alt_font.copy()
+        alt_font.selection.none()
+
+        font.selection.select(unicode)
+        font.paste()
+        font.selection.none()
+
+        glyph = font[unicode]
+
+        # glyph is bigger than standard character. probably twice as big
+        if glyph.width > alt_font_glyph_width:
+            # crop by 75%
+            shift_x_float = -(glyph.width - alt_font_glyph_width) * 0.25
+            shift_x = int(shift_x_float)
+            if shift_x != shift_x_float:
+                raise Exception(
+                    "glyph cropping doesn't round evenly. %d != %f" %
+                    (shift_x, shift_x_float)
+                )
+            glyph.transform(psMat.translate(shift_x, 0), ("partialRefs"))
+            glyph.width += int(shift_x)
+
+        # scale to fit our monospace font
+        glyph_scale = font_glyph_width / glyph.width
+        glyph.transform(psMat.scale(glyph_scale, 1), ("partialRefs"))
+
+        return True
+
+    for_each_glyph_range_array(glyphs_from_alt_font, copy_glyph_from_alt_font)
 
     # scale first
-    for glyph in font.glyphs():
-        glyph.transform(scaleMatrix, ("partialRefs"))
+    if i.italic:
+        scale_matrix = psMat.scale(SCALE_X_ITALIC, 1)
+    else:
+        scale_matrix = psMat.scale(SCALE_X, 1)
 
-        if (not i.italic):
+    for glyph in font.glyphs():
+        glyph.transform(scale_matrix, ("partialRefs"))
+
+        if not i.italic:
             i.regular_glyph_widths[glyph.glyphname] = glyph.width
 
     # italicize
-    if (i.italic):
+    if i.italic:
         font.selection.none()
         for glyph in font.glyphs():
             font.selection.select(glyph)
@@ -98,8 +180,7 @@ def generateFont(i: FontGenInput):
 
     # apply weight
     for glyph in font.glyphs():
-        can_change_weight = glyph.glyphname not in glyphs_ignore_weight
-        if i.stroke_width > 0 and can_change_weight:
+        if i.stroke_width > 0 and not should_ignore_weight(glyph):
             glyph.changeWeight(i.stroke_width, "CJK")
 
     font.save("fonts/" + filename + ".sfd")
